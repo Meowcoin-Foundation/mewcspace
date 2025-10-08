@@ -33,7 +33,7 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
   blocks: BlockchainBlock[] = [];
   dynamicBlocksAmount: number = 8;
   emptyBlocks: BlockExtended[] = this.mountEmptyBlocks();
-  markHeight: number;
+  markHeight: number | undefined;
   chainTip: number;
   blocksSubscription: Subscription;
   blockPageSubscription: Subscription;
@@ -41,8 +41,8 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
   tabHiddenSubscription: Subscription;
   markBlockSubscription: Subscription;
   loadingBlocks$: Observable<boolean>;
-  blockStyles = [];
-  emptyBlockStyles = [];
+  blockStyles: any[] = [];
+  emptyBlockStyles: any[] = [];
   interval: any;
   tabHidden = false;
   feeRounding = '1.0-0';
@@ -61,6 +61,25 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
   gradientColors = { // MEWCbrand: current blocks gradient colors
     '': ['#2396d9', '#2368d9'],
     testnet: ['#2396d9', '#2368d9'],
+  };
+
+  // Version-based color mapping for different mining algorithms
+  versionColors = {
+    '0x30090000': { // MeowPow (Meowcoin orange)
+      top: '#bb8400',
+      left: '#a67300',
+      gradient: ['#bb8400', '#a67300']
+    },
+    '0x30090100': { // Scrypt (Litecoin blue) - fixed version
+      top: '#67a1cb',
+      left: '#5a8bb5',
+      gradient: ['#67a1cb', '#5a8bb5']
+    },
+    'default': { // Default colors
+      top: '#3e3c3c',
+      left: '#2b2b2b',
+      gradient: ['#2396d9', '#2368d9']
+    }
   };
 
   constructor(
@@ -283,6 +302,11 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
     return this.specialBlocks[height]?.networks.includes(this.stateService.network || 'mainnet') ? true : false;
   }
 
+  getVersionColors(version: number) {
+    const versionHex = '0x' + version.toString(16).toUpperCase();
+    return this.versionColors[versionHex] || this.versionColors['default'];
+  }
+
   getStyleForBlock(block: BlockchainBlock, index: number, animateEnterFrom: number = 0) {
     if (!block || block.placeholder) {
       return this.getStyleForPlaceholderBlock(index, animateEnterFrom);
@@ -296,7 +320,10 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
       addLeft = animateEnterFrom || 0;
     }
 
-    // MEWCbrand: block cube background
+    // Get version-based colors
+    const versionColors = this.getVersionColors(block.version);
+    
+    // MEWCbrand: block cube background with version-based colors
     return {
       left: addLeft + this.blockOffset * index + 'px',
       background: `repeating-linear-gradient(
@@ -306,6 +333,8 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
         ${this.gradientColors[this.network][1]} 100%
       )`,
       transition: animateEnterFrom ? 'background 2s, transform 1s' : null,
+      '--block-top-color': versionColors.top,
+      '--block-left-color': versionColors.left,
     };
   }
 
@@ -342,7 +371,7 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   mountEmptyBlocks() {
-    const emptyBlocks = [];
+    const emptyBlocks: BlockExtended[] = [];
     for (let i = 0; i < this.dynamicBlocksAmount; i++) {
       emptyBlocks.push({
         id: '',
@@ -357,7 +386,6 @@ export class BlockchainBlocksComponent implements OnInit, OnChanges, OnDestroy {
         size: 0,
         weight: 0,
         previousblockhash: '',
-        matchRate: 0,
       });
     }
     return emptyBlocks;
