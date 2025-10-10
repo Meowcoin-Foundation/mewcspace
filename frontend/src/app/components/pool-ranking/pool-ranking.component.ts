@@ -114,7 +114,7 @@ export class PoolRankingComponent implements OnInit {
     // Handle special pool IDs for algorithm hashrate data
     if (pool.poolId === 0) {
       return poolsColor['unknown']; // MeowPow Unknown
-    } else if (pool.poolId === 999999) {
+    } else if (pool.poolId === 65000) {
       return poolsColor['unknown-scrypt']; // Scrypt Unknown
     }
     
