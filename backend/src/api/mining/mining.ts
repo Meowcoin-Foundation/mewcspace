@@ -348,8 +348,8 @@ class Mining {
           const blockStats: any = await BlocksRepository.$blockCountBetweenTimestamp(
             null, fromTimestamp / 1000, toTimestampAlgo / 1000);
           
-          // Get algorithm-specific hashrate
-          const lastBlockHashrate = blockStats.blockCount === 0 ? 0 : await bitcoinClient.getNetworkHashPs(0, -1, algorithm);
+          // Get algorithm-specific hashrate (use 120 blocks for proper average)
+          const lastBlockHashrate = blockStats.blockCount === 0 ? 0 : await bitcoinClient.getNetworkHashPs(120, -1, algorithm);
 
           hashrates.push({
             hashrateTimestamp: toTimestampAlgo / 1000,
@@ -372,7 +372,7 @@ class Mining {
         if (config.MEMPOOL.INDEXING_BLOCKS_AMOUNT === -1 && !indexedTimestamp.includes(genesisTimestamp / 1000)) {
           hashrates.push({
             hashrateTimestamp: genesisTimestamp / 1000,
-            avgHashrate: await bitcoinClient.getNetworkHashPs(0, -1, algorithm),
+            avgHashrate: await bitcoinClient.getNetworkHashPs(120, -1, algorithm),
             poolId: 0,
             share: 1,
             type: 'daily',
@@ -461,8 +461,13 @@ class Mining {
 
       logger.debug(`Indexing ${algorithmName} difficulty adjustments`, logger.tags.mining);
 
-      // Filter blocks for Scrypt to only include blocks after activation
-      const blocksToProcess = algorithm === 1 ? blocks.filter(block => block.height >= SCRYPT_ACTIVATION_BLOCK) : blocks;
+      // Filter blocks by algorithm version - each algorithm only processes its own blocks
+      const version = algorithm === 0 ? 0x30090000 : 0x30090100;
+      const blocksToProcess = algorithm === 1 
+        ? blocks.filter(block => block.height >= SCRYPT_ACTIVATION_BLOCK && block.version === version)
+        : blocks.filter(block => block.version === version);
+      
+      logger.debug(`Found ${blocksToProcess.length} ${algorithmName} blocks to process for difficulty adjustments`, logger.tags.mining);
 
       for (const block of blocksToProcess) {
         // Get algorithm-specific difficulty for this block
