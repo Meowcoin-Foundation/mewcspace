@@ -184,7 +184,7 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   $getNetworkHashPsByAlgorithm(algorithm: number): Promise<number> {
-    return this.bitcoindClient.getNetworkHashPs(0, -1, algorithm);
+    return this.bitcoindClient.getNetworkHashPs(120, -1, algorithm);
   }
 
   protected async $convertTransaction(transaction: IBitcoinApi.Transaction, addPrevout: boolean, lazyPrevouts = false): Promise<IEsploraApi.Transaction> {

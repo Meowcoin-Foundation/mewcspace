@@ -143,8 +143,8 @@ class MiningRoutes {
     
     let currentHashrate = 0, currentDifficulty = 0;
     try {
-      // Use algorithm-specific values
-      currentHashrate = await bitcoinClient.getNetworkHashPs(0, -1, algorithm);
+      // Use algorithm-specific values (120 blocks for proper average)
+      currentHashrate = await bitcoinClient.getNetworkHashPs(120, -1, algorithm);
       currentDifficulty = await bitcoinClient.getDifficulty(algorithm);
     } catch (e) {
       logger.debug('Bitcoin Core is not available, using zeroed value for current hashrate and difficulty');
@@ -342,11 +342,11 @@ class MiningRoutes {
         return;
       }
 
-      // Get current hashrates from Bitcoin Core (these are fast RPC calls)
+      // Get current hashrates from Bitcoin Core (120 blocks for proper average)
       let meowpowHashrate = 0, scryptHashrate = 0;
       try {
-        meowpowHashrate = await bitcoinClient.getNetworkHashPs(0, -1, 0);
-        scryptHashrate = await bitcoinClient.getNetworkHashPs(0, -1, 1);
+        meowpowHashrate = await bitcoinClient.getNetworkHashPs(120, -1, 0);
+        scryptHashrate = await bitcoinClient.getNetworkHashPs(120, -1, 1);
       } catch (e) {
         logger.debug('Bitcoin Core is not available, using zeroed values for hashrates');
       }
