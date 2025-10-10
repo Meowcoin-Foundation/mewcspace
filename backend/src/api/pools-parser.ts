@@ -17,7 +17,7 @@ class PoolsParser {
   };
   
   unknownScryptPool: any = {
-    'id': -1,
+    'id': 999999,
     'name': 'Unknown',
     'link': 'https://www.mewccrypto.com/',
     'regexes': '[]',
