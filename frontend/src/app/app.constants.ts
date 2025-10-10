@@ -81,7 +81,8 @@ export const chartColors = [
 ];
 
 export const poolsColor = {
-  'unknown': '#FDD835',
+  'unknown': '#FDD835',        // MeowPow Unknown (poolId: 0)
+  'unknown-scrypt': '#67a1cb', // Scrypt Unknown (poolId: -1) - Litecoin blue
 };
 
 export const feeLevels = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200,

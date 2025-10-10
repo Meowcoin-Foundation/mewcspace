@@ -12,6 +12,7 @@ import { chartColors, poolsColor } from '../../app.constants';
 import { RelativeUrlPipe } from '../../shared/pipes/relative-url/relative-url.pipe';
 import { download } from '../../shared/graphs.utils';
 import { isMobile } from '../../shared/common.utils';
+import { SinglePoolStats } from '../../interfaces/node-api.interface';
 
 @Component({
   selector: 'app-pool-ranking',
@@ -109,6 +110,18 @@ export class PoolRankingComponent implements OnInit {
       );
   }
 
+  getPoolColor(pool: SinglePoolStats): string {
+    // Handle special pool IDs for algorithm hashrate data
+    if (pool.poolId === 0) {
+      return poolsColor['unknown']; // MeowPow Unknown
+    } else if (pool.poolId === -1) {
+      return poolsColor['unknown-scrypt']; // Scrypt Unknown
+    }
+    
+    // Default to name-based color resolution for regular pools
+    return poolsColor[pool.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()] || '#6b6b6b';
+  }
+
   generatePoolsChartSerieData(miningStats) {
     let poolShareThreshold = 0.5;
     if (isMobile()) {
@@ -138,7 +151,7 @@ export class PoolRankingComponent implements OnInit {
       }
       data.push({
         itemStyle: {
-          color: poolsColor[pool.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()],
+          color: this.getPoolColor(pool),
         },
         value: pool.share,
         name: pool.name + ((isMobile() || this.widget) ? `` : ` (${pool.share}%)`),

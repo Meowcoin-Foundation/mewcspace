@@ -354,7 +354,7 @@ class Mining {
           hashrates.push({
             hashrateTimestamp: toTimestampAlgo / 1000,
             avgHashrate: lastBlockHashrate,
-            poolId: 0,
+            poolId: algorithm === 0 ? 0 : -1, // MeowPow uses 0 (Unknown), Scrypt uses -1 (Unknown-Scrypt)
             share: 1,
             type: 'daily',
           });
@@ -373,7 +373,7 @@ class Mining {
           hashrates.push({
             hashrateTimestamp: genesisTimestamp / 1000,
             avgHashrate: await bitcoinClient.getNetworkHashPs(120, -1, algorithm),
-            poolId: 0,
+            poolId: algorithm === 0 ? 0 : -1, // MeowPow uses 0 (Unknown), Scrypt uses -1 (Unknown-Scrypt)
             share: 1,
             type: 'daily',
           });

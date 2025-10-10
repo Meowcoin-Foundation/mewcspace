@@ -10,10 +10,19 @@ class PoolsParser {
   unknownPool: any = {
     'id': 0,
     'name': 'Unknown',
-    'link': 'https://learnmeabitcoin.com/technical/coinbase-transaction',
+    'link': 'https://www.mewccrypto.com/',
     'regexes': '[]',
     'addresses': '[]',
     'slug': 'unknown'
+  };
+  
+  unknownScryptPool: any = {
+    'id': -1,
+    'name': 'Unknown',
+    'link': 'https://www.mewccrypto.com/',
+    'regexes': '[]',
+    'addresses': '[]',
+    'slug': 'unknown-scrypt'
   };
   private uniqueLogs: string[] = [];
 
@@ -81,6 +90,13 @@ class PoolsParser {
     }
 
     logger.info('Mining pools-v2.json import completed');
+  }
+
+  /**
+   * Get unknown scrypt pool (for hashrate data)
+   */
+  public getUnknownScryptPool(): any {
+    return this.unknownScryptPool;
   }
 
   /**
