@@ -118,8 +118,11 @@ export class PoolRankingComponent implements OnInit {
       return poolsColor['unknown-scrypt']; // Scrypt Unknown
     }
     
-    // Default to name-based color resolution for regular pools
-    return poolsColor[pool.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()] || '#6b6b6b';
+    // For regular pools, use the original chartColors array by pool rank/index
+    // This maintains the original color scheme for all existing pools
+    const availableColors = chartColors.filter(color => color !== '#FDD835'); // Exclude yellow used for Unknown
+    const colorIndex = (pool.rank - 1) % availableColors.length; // Use rank to get consistent colors
+    return availableColors[colorIndex] || '#6b6b6b';
   }
 
   generatePoolsChartSerieData(miningStats) {
