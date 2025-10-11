@@ -11,34 +11,57 @@
 
 .algorithm-selector {
   .btn-group {
+    display: inline-flex; // keeps buttons snug around their content
+    align-items: center;
+    gap: 0.3rem;
+
     .btn {
-      border-radius: 0.5rem;
-      margin-right: 0.5rem;
-      
-      &:last-child {
-        margin-right: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.6rem; // compact padding
+      font-size: 0.75rem;      // slightly smaller text
+      font-weight: 600;
+      font-family: "Inter", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background-color: #1e1e1e;
+      border: 1px solid #3a3a3a;
+      color: #cbd5e1;
+      white-space: nowrap;     // prevents wrapping
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        background-color: #2a2a2a;
+        border-color: #4b4b4b;
+        color: #ffffff;
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.15);
       }
-      
+
       &.active {
-        background-color: #3b82f6;
-        border-color: #3b82f6;
-        color: white;
+        background-color: #0f172a;
+        border-color: #38bdf8;
+        color: #e0f2fe;
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
       }
-      
+
       i {
-        margin-right: 0.5rem;
+        margin-right: 0.25rem;
+        font-size: 0.85em;
       }
-      
+
       .meowpow-icon {
-        color: #fbbf24;
+        color: #facc15;
       }
-      
+
       .scrypt-icon {
-        color: #3b82f6;
+        color: #38bdf8;
       }
     }
   }
 }
+
 
 .main-title {
   position: relative;
