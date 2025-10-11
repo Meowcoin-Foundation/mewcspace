@@ -68,45 +68,33 @@ export class HashrateChartComponent implements OnInit {
   }
 
   getAlgorithmColors() {
-    if (this.algorithm === 'scrypt') {
-      return {
-        hashrate: new graphic.LinearGradient(0, 0, 0, 0.65, [
-          { offset: 0, color: '#1E3A8A99' },
-          { offset: 0.25, color: '#2563EB99' },
-          { offset: 0.5, color: '#3B82F699' },
-          { offset: 0.75, color: '#60A5FA99' },
-          { offset: 1, color: '#93C5FD99' }
-        ]),
-        difficulty: '#1E40AF',
-        hashrateMa: new graphic.LinearGradient(0, 0, 0, 0.65, [
-          { offset: 0, color: '#1E3A8A' },
-          { offset: 0.25, color: '#2563EB' },
-          { offset: 0.5, color: '#3B82F6' },
-          { offset: 0.75, color: '#60A5FA' },
-          { offset: 1, color: '#93C5FD' }
-        ])
-      };
-    } else {
-      // MeowPow colors (orange/gold)
-      return {
-        hashrate: new graphic.LinearGradient(0, 0, 0, 0.65, [
-          { offset: 0, color: '#F4511E99' },
-          { offset: 0.25, color: '#FB8C0099' },
-          { offset: 0.5, color: '#FFB30099' },
-          { offset: 0.75, color: '#FDD83599' },
-          { offset: 1, color: '#7CB34299' }
-        ]),
-        difficulty: '#D81B60',
-        hashrateMa: new graphic.LinearGradient(0, 0, 0, 0.65, [
-          { offset: 0, color: '#F4511E' },
-          { offset: 0.25, color: '#FB8C00' },
-          { offset: 0.5, color: '#FFB300' },
-          { offset: 0.75, color: '#FDD835' },
-          { offset: 1, color: '#7CB342' }
-        ])
-      };
-    }
+    const isScrypt = this.algorithm === 'scrypt';
+  
+    // Vibrant cyan-green gradient for hashrate (stands out beautifully on dark)
+    const hashrateGradient = new graphic.LinearGradient(0, 0, 0, 0.65, [
+      { offset: 0, color: '#00E5FF' },  // bright cyan
+      { offset: 0.25, color: '#00BCD4' }, // teal
+      { offset: 0.5, color: '#00C853' },  // vivid green
+      { offset: 0.75, color: '#AEEA00' }, // lime glow
+      { offset: 1, color: '#F4FF81' }     // soft yellow highlight
+    ]);
+  
+    // Softer, semi-transparent version for moving average
+    const hashrateMAGradient = new graphic.LinearGradient(0, 0, 0, 0.65, [
+      { offset: 0, color: '#00E5FF55' },
+      { offset: 0.25, color: '#00BCD455' },
+      { offset: 0.5, color: '#00C85355' },
+      { offset: 0.75, color: '#AEEA0055' },
+      { offset: 1, color: '#F4FF8155' }
+    ]);
+  
+    return {
+      hashrate: hashrateGradient, // main line - bright and clean
+      difficulty: '#FF5252',      // vivid red but not painful
+      hashrateMa: hashrateMAGradient // smooth, translucent overlay
+    };
   }
+  
 
   constructor(
     @Inject(LOCALE_ID) public locale: string,
