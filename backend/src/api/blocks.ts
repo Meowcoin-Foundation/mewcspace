@@ -186,17 +186,20 @@ class Blocks {
       // For auxpow blocks, the coinbase transaction is in auxpow.tx
       const auxpowCoinbase = verboseBlock.auxpow.tx;
       try {
+        logger.debug(`[AUXPOW DEBUG] Block #${block.height} auxpow vout[0]:`, JSON.stringify(auxpowCoinbase.vout?.[0]));
         coinbaseTx = {
           vin: [{
             scriptsig: auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || ''
           }],
           vout: (auxpowCoinbase.vout || []).map((vout) => ({
-            scriptpubkey_address: vout.scriptPubKey?.address || '',
+            scriptpubkey_address: vout.scriptPubKey?.address || vout.scriptPubKey?.addresses?.[0] || '',
             scriptpubkey_asm: vout.scriptPubKey?.asm || '',
             value: vout.value || 0
           })).filter((vout) => vout.value > 0)
         };
+        logger.debug(`[AUXPOW DEBUG] Block #${block.height} extracted vout[0]:`, JSON.stringify(coinbaseTx.vout[0]));
       } catch (auxpowError) {
+        logger.warn(`[AUXPOW] Error extracting auxpow coinbase: ${auxpowError}`);
         // Fallback to regular transaction processing
         coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
       }
