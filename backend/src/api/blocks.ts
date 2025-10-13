@@ -175,10 +175,35 @@ class Blocks {
    * Return a block with additional data (reward, coinbase, fees...)
    * @param block
    * @param transactions
+   * @param verboseBlock
    * @returns BlockExtended
    */
-  private async $getBlockExtended(block: IEsploraApi.Block, transactions: TransactionExtended[]): Promise<BlockExtended> {
-    const coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
+  private async $getBlockExtended(block: IEsploraApi.Block, transactions: TransactionExtended[], verboseBlock?: IBitcoinApi.VerboseBlock): Promise<BlockExtended> {
+    let coinbaseTx: TransactionMinerInfo;
+
+    // Check if this is an auxpow block (version 0x30090100 = 805896448)
+    if (block.version === 805896448 && verboseBlock?.auxpow?.tx) {
+      // For auxpow blocks, the coinbase transaction is in auxpow.tx
+      const auxpowCoinbase = verboseBlock.auxpow.tx;
+      try {
+        coinbaseTx = {
+          vin: [{
+            scriptsig: auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || ''
+          }],
+          vout: (auxpowCoinbase.vout || []).map((vout) => ({
+            scriptpubkey_address: vout.scriptPubKey?.address || '',
+            scriptpubkey_asm: vout.scriptPubKey?.asm || '',
+            value: vout.value || 0
+          })).filter((vout) => vout.value > 0)
+        };
+      } catch (auxpowError) {
+        // Fallback to regular transaction processing
+        coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
+      }
+    } else {
+      // For regular blocks, use the first transaction
+      coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
+    }
     
     const blk: Partial<BlockExtended> = Object.assign({}, block);
     const extras: Partial<BlockExtension> = {};
@@ -511,13 +536,14 @@ class Blocks {
             indexedThisRun = 0;
             loadingIndicators.setProgress('block-indexing', progress, false);
           }
-          const blockHash = await bitcoinApi.$getBlockHash(blockHeight);
-          const block: IEsploraApi.Block = await bitcoinCoreApi.$getBlock(blockHash);
-          const transactions = await this.$getTransactionsExtended(blockHash, block.height, true, true);
-          const blockExtended = await this.$getBlockExtended(block, transactions);
+        const blockHash = await bitcoinApi.$getBlockHash(blockHeight);
+        const verboseBlock = await bitcoinClient.getBlock(blockHash, 2);
+        const block = BitcoinApi.convertBlock(verboseBlock);
+        const transactions = await this.$getTransactionsExtended(blockHash, block.height, true, true);
+        const blockExtended = await this.$getBlockExtended(block, transactions, verboseBlock);
 
-          newlyIndexed++;
-          await blocksRepository.$saveBlockInDatabase(blockExtended);
+        newlyIndexed++;
+        await blocksRepository.$saveBlockInDatabase(blockExtended);
         }
 
         currentBlockHeight -= chunkSize;
@@ -754,9 +780,10 @@ class Blocks {
     }
 
     const blockHash = await bitcoinApi.$getBlockHash(height);
-    const block: IEsploraApi.Block = await bitcoinCoreApi.$getBlock(blockHash);
+    const verboseBlock = await bitcoinClient.getBlock(blockHash, 2);
+    const block = BitcoinApi.convertBlock(verboseBlock);
     const transactions = await this.$getTransactionsExtended(blockHash, block.height, true);
-    const blockExtended = await this.$getBlockExtended(block, transactions);
+    const blockExtended = await this.$getBlockExtended(block, transactions, verboseBlock);
 
     if (Common.indexingEnabled()) {
       await blocksRepository.$saveBlockInDatabase(blockExtended);

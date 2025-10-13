@@ -54,6 +54,16 @@ export namespace IBitcoinApi {
     nTx: number;                     //  (numeric) The number of transactions in the block
     previousblockhash: string;       //  (string) The hash of the previous block
     nextblockhash: string;           //  (string) The hash of the next block
+    auxpow?: AuxPow;                 //  (object, optional) Auxiliary proof-of-work data for auxpow blocks
+  }
+
+  export interface AuxPow {
+    tx: Transaction;                 //  (object) The parent block coinbase transaction
+    index: number;                   //  (numeric) Transaction index in parent block
+    chainindex: number;              //  (numeric) Chain index
+    merklebranch: string[];          //  (array) Merkle branch
+    chainmerklebranch: string[];     //  (array) Chain merkle branch
+    parentblock: string;             //  (string) Parent block header
   }
 
   export interface Transaction {
