@@ -73,7 +73,7 @@ describe('Mainnet - Mining Features', () => {
         cy.get('[data-cy="bitcoin-block-0-pool"]').invoke('text').should('match', /(\w)/);
       });
 
-      it('shows the reward stats for the last 144 blocks', () => {
+      it('shows the reward stats for the last 1440 blocks', () => {
         cy.get('[data-cy="reward-stats"]');
       });
 

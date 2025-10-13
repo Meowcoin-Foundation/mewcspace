@@ -262,7 +262,7 @@ export class ApiService {
     );
   }
 
-  getRewardStats$(blockCount: number = 144): Observable<RewardStats> {
+  getRewardStats$(blockCount: number = 1440): Observable<RewardStats> {
     return this.httpClient.get<RewardStats>(this.apiBaseUrl + this.apiBasePath + `/api/v1/mining/reward-stats/${blockCount}`);
   }
 

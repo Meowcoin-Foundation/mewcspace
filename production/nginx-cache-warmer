@@ -43,7 +43,7 @@ do for url in / \
 	'/api/v1/mining/hashrate/pools/2y' \
 	'/api/v1/mining/hashrate/pools/3y' \
 	'/api/v1/mining/hashrate/pools/all' \
-	'/api/v1/mining/reward-stats/144' \
+	'/api/v1/mining/reward-stats/1440' \
 	'/api/v1/mining/blocks/fees/24h' \
 	'/api/v1/mining/blocks/fees/3d' \
 	'/api/v1/mining/blocks/fees/1w' \

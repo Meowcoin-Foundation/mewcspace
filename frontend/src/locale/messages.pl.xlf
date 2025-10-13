@@ -3783,7 +3783,7 @@
         <note priority="1" from="description">mining.reward-stats</note>
       </trans-unit>
       <trans-unit id="8527213d7c7dbffe48a45c4d796ae221d419c71a" datatype="html">
-        <source>(144 blocks)</source>
+        <source>(1440 blocks)</source>
         <target>(144 bloków)</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/mining-dashboard/mining-dashboard.component.html</context>
@@ -4284,7 +4284,7 @@
         <note priority="1" from="description">mining.rewards</note>
       </trans-unit>
       <trans-unit id="79b0842a2010172290ad09062bf51f09d8842f65" datatype="html">
-        <source>Amount being paid to miners in the past 144 blocks</source>
+        <source>Amount being paid to miners in the past 1440 blocks</source>
         <target>Kwota zapłacona wydobywcom w ostatnich 144 blokach</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/reward-stats/reward-stats.component.html</context>
@@ -4306,7 +4306,7 @@
         <note priority="1" from="description">mining.fees-per-block</note>
       </trans-unit>
       <trans-unit id="a0d4ab5b063e7be1c9ea980f5fd6ce1b5384ad0b" datatype="html">
-        <source>Average fees per block in the past 144 blocks</source>
+        <source>Average fees per block in the past 1440 blocks</source>
         <target>Średnie opłaty na blok w ciągu ostatnich 144 bloków</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/reward-stats/reward-stats.component.html</context>
@@ -4338,7 +4338,7 @@
         <note priority="1" from="description">mining.average-fee</note>
       </trans-unit>
       <trans-unit id="8be96dc461529381c812f64962c62f4228d01470" datatype="html">
-        <source>Fee paid on average for each transaction in the past 144 blocks</source>
+        <source>Fee paid on average for each transaction in the past 1440 blocks</source>
         <target>Średni poziom opłaty poniesionej w każdej transakcji w ostatnich 144 blokach</target>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/components/reward-stats/reward-stats.component.html</context>

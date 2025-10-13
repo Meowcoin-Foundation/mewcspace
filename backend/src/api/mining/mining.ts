@@ -304,7 +304,7 @@ class Mining {
       const lastMidnight = this.getDateMidnight(new Date());
       let toTimestamp = Math.round(lastMidnight.getTime());
 
-      const totalDayIndexed = (await BlocksRepository.$blockCount(null, null)) / 144;
+      const totalDayIndexed = (await BlocksRepository.$blockCount(null, null)) / 1440;
       let indexedThisRun = 0;
       let totalIndexed = 0;
       let newlyIndexed = 0;
