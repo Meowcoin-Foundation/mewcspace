@@ -181,15 +181,16 @@ class Blocks {
   private async $getBlockExtended(block: IEsploraApi.Block, transactions: TransactionExtended[], verboseBlock?: IBitcoinApi.VerboseBlock): Promise<BlockExtended> {
     let coinbaseTx: TransactionMinerInfo;
 
-    // Check if this is an auxpow block (version 0x30090100 = 805896448)
-    if (block.version === 805896448 && verboseBlock?.auxpow?.tx) {
+    // Check if this is an auxpow block
+    const isAuxPow = !!verboseBlock?.auxpow || (block.version & 0x100) !== 0;
+    if (isAuxPow && verboseBlock?.auxpow?.tx) {
       // For auxpow blocks, the coinbase transaction is in auxpow.tx
       const auxpowCoinbase = verboseBlock.auxpow.tx;
       try {
-        logger.debug(`[AUXPOW DEBUG] Block #${block.height} auxpow vout[0]:`, JSON.stringify(auxpowCoinbase.vout?.[0]));
+        const coinbaseHex = auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || '';
         coinbaseTx = {
           vin: [{
-            scriptsig: auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || ''
+            scriptsig: coinbaseHex
           }],
           vout: (auxpowCoinbase.vout || []).map((vout) => ({
             scriptpubkey_address: vout.scriptPubKey?.address || vout.scriptPubKey?.addresses?.[0] || '',
@@ -197,7 +198,7 @@ class Blocks {
             value: vout.value || 0
           })).filter((vout) => vout.value > 0)
         };
-        logger.debug(`[AUXPOW DEBUG] Block #${block.height} extracted vout[0]:`, JSON.stringify(coinbaseTx.vout[0]));
+        logger.debug(`[AUXPOW] Block #${block.height} parent coinbase ASCII: ${transactionUtils.hex2ascii(coinbaseHex)}`);
       } catch (auxpowError) {
         logger.warn(`[AUXPOW] Error extracting auxpow coinbase: ${auxpowError}`);
         // Fallback to regular transaction processing
@@ -288,35 +289,34 @@ class Blocks {
       extras.totalInputAmt = null;
     }
 
-    if (['mainnet', 'testnet', 'signet'].includes(config.MEMPOOL.NETWORK)) {
-      let pool: PoolTag;
-      if (coinbaseTx !== undefined) {
-        pool = await this.$findBlockMiner(coinbaseTx);
+    // Pool detection - works for all networks
+    let pool: PoolTag;
+    if (coinbaseTx !== undefined) {
+      pool = await this.$findBlockMiner(coinbaseTx);
+    } else {
+      if (config.DATABASE.ENABLED === true) {
+        pool = await poolsRepository.$getUnknownPool();
       } else {
-        if (config.DATABASE.ENABLED === true) {
-          pool = await poolsRepository.$getUnknownPool();
-        } else {
-          pool = poolsParser.unknownPool;
-        }
+        pool = poolsParser.unknownPool;
       }
+    }
 
-      if (!pool) { // We should never have this situation in practise
-        logger.warn(`Cannot assign pool to block ${blk.height} and 'unknown' pool does not exist. ` +
-          `Check your "pools" table entries`);
-      } else {
-        extras.pool = {
-          id: pool.uniqueId,
-          name: pool.name,
-          slug: pool.slug,
-        };
-      }
+    if (!pool) { // We should never have this situation in practise
+      logger.warn(`Cannot assign pool to block ${blk.height} and 'unknown' pool does not exist. ` +
+        `Check your "pools" table entries`);
+    } else {
+      extras.pool = {
+        id: pool.uniqueId,
+        name: pool.name,
+        slug: pool.slug,
+      };
+    }
 
-      extras.matchRate = null;
-      if (config.MEMPOOL.AUDIT) {
-        const auditScore = await BlocksAuditsRepository.$getBlockAuditScore(block.id);
-        if (auditScore != null) {
-          extras.matchRate = auditScore.matchRate;
-        }
+    extras.matchRate = null;
+    if (config.MEMPOOL.AUDIT && ['mainnet', 'testnet', 'signet'].includes(config.MEMPOOL.NETWORK)) {
+      const auditScore = await BlocksAuditsRepository.$getBlockAuditScore(block.id);
+      if (auditScore != null) {
+        extras.matchRate = auditScore.matchRate;
       }
     }
 
@@ -391,6 +391,7 @@ class Blocks {
               const regex = new RegExp(regexes[y], 'i');
               const match = asciiScriptSig.match(regex);
               if (match !== null) {
+                logger.debug(`[POOL] Matched pool ${pool.name} with regex "${regexes[y]}" in coinbase: "${asciiScriptSig}"`);
                 return pool;
               }
             }
@@ -401,6 +402,7 @@ class Blocks {
       }
     }
 
+    logger.debug(`[POOL] No pool match for coinbase ASCII: "${asciiScriptSig}"`);
     if (config.DATABASE.ENABLED === true) {
       return await poolsRepository.$getUnknownPool();
     } else {
