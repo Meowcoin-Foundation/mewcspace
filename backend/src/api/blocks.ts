@@ -186,6 +186,7 @@ class Blocks {
       // For auxpow blocks, the coinbase transaction is in auxpow.tx
       const auxpowCoinbase = verboseBlock.auxpow.tx;
       try {
+        logger.debug(`[AUXPOW] Processing auxpow block #${block.height}, auxpow coinbase txid: ${auxpowCoinbase.txid}`);
         coinbaseTx = {
           vin: [{
             scriptsig: auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || ''
@@ -196,7 +197,9 @@ class Blocks {
             value: vout.value || 0
           })).filter((vout) => vout.value > 0)
         };
+        logger.debug(`[AUXPOW] Extracted coinbase for block #${block.height}: address=${coinbaseTx.vout[0]?.scriptpubkey_address}`);
       } catch (auxpowError) {
+        logger.warn(`[AUXPOW] Failed to extract auxpow coinbase for block #${block.height}, falling back to regular processing. Error: ${auxpowError}`);
         // Fallback to regular transaction processing
         coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
       }
@@ -630,7 +633,7 @@ class Blocks {
       const txIds: string[] = await bitcoinApi.$getTxIdsForBlock(blockHash);
       const transactions = await this.$getTransactionsExtended(blockHash, block.height, false);
       const cpfpSummary: CpfpSummary = Common.calculateCpfp(block.height, transactions);
-      const blockExtended: BlockExtended = await this.$getBlockExtended(block, cpfpSummary.transactions);
+      const blockExtended: BlockExtended = await this.$getBlockExtended(block, cpfpSummary.transactions, verboseBlock);
       const blockSummary: BlockSummary = this.summarizeBlock(verboseBlock);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
