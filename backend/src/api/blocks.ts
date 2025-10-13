@@ -112,7 +112,7 @@ class Blocks {
             }
           } catch (e) {
             if (i === 0) {
-              const msg = `Cannot fetch coinbase tx ${txIds[i]}. Reason: ` + (e instanceof Error ? e.message : e); 
+              const msg = `Cannot fetch coinbase tx ${txIds[i]}. Reason: ` + (e instanceof Error ? e.message : e);
               logger.err(msg);
               throw new Error(msg);
             } else {
@@ -186,7 +186,6 @@ class Blocks {
       // For auxpow blocks, the coinbase transaction is in auxpow.tx
       const auxpowCoinbase = verboseBlock.auxpow.tx;
       try {
-        logger.debug(`[AUXPOW] Processing auxpow block #${block.height}, auxpow coinbase txid: ${auxpowCoinbase.txid}`);
         coinbaseTx = {
           vin: [{
             scriptsig: auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || ''
@@ -197,9 +196,7 @@ class Blocks {
             value: vout.value || 0
           })).filter((vout) => vout.value > 0)
         };
-        logger.debug(`[AUXPOW] Extracted coinbase for block #${block.height}: address=${coinbaseTx.vout[0]?.scriptpubkey_address}`);
       } catch (auxpowError) {
-        logger.warn(`[AUXPOW] Failed to extract auxpow coinbase for block #${block.height}, falling back to regular processing. Error: ${auxpowError}`);
         // Fallback to regular transaction processing
         coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
       }
@@ -207,7 +204,7 @@ class Blocks {
       // For regular blocks, use the first transaction
       coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
     }
-    
+
     const blk: Partial<BlockExtended> = Object.assign({}, block);
     const extras: Partial<BlockExtension> = {};
 
@@ -240,7 +237,6 @@ class Blocks {
           feeStats = Common.calcEffectiveFeeStatistics(transactions);
         } catch (e) {
           // Fallback to getblockstats data if calcEffectiveFeeStatistics fails
-          console.log(`[FEE CALC] Fallback to getblockstats for block ${block.id}: ${e instanceof Error ? e.message : e}`);
         }
       }
       extras.medianFee = Math.max(0, feeStats.medianFee || 0);
@@ -264,7 +260,7 @@ class Blocks {
         extras.medianFeeAmt = extras.feePercentiles[3];
       }
     }
-  
+
     extras.virtualSize = block.weight / 4.0;
     if (coinbaseTx?.vout.length > 0) {
       extras.coinbaseAddress = coinbaseTx.vout[0].scriptpubkey_address ?? null;
@@ -283,7 +279,7 @@ class Blocks {
     if (coinStatsIndex !== null && coinStatsIndex.best_block_height >= block.height) {
       const txoutset = await bitcoinClient.getTxoutSetinfo('none', block.height);
       extras.utxoSetSize = txoutset.txouts,
-      extras.totalInputAmt = Math.round(txoutset.block_info.prevout_spent * 100000000);
+        extras.totalInputAmt = Math.round(txoutset.block_info.prevout_spent * 100000000);
     } else {
       extras.utxoSetSize = null;
       extras.totalInputAmt = null;
@@ -331,7 +327,7 @@ class Blocks {
    * @returns
    */
   private async $findBlockMiner(txMinerInfo: TransactionMinerInfo | undefined): Promise<PoolTag> {
-    if (txMinerInfo === undefined || txMinerInfo.vout.length < 1) {
+    if (txMinerInfo === undefined || !txMinerInfo.vout || txMinerInfo.vout.length < 1) {
       if (config.DATABASE.ENABLED === true) {
         return await poolsRepository.$getUnknownPool();
       } else {
@@ -339,34 +335,65 @@ class Blocks {
       }
     }
 
-    const asciiScriptSig = transactionUtils.hex2ascii(txMinerInfo.vin[0].scriptsig);
+    const asciiScriptSig = transactionUtils.hex2ascii(txMinerInfo.vin?.[0]?.scriptsig || '');
     const addresses = txMinerInfo.vout.map((vout) => vout.scriptpubkey_address).filter((address) => address);
 
     let pools: PoolTag[] = [];
-    if (config.DATABASE.ENABLED === true) {
-      pools = await poolsRepository.$getPools();
-    } else {
-      pools = poolsParser.miningPools;
+    try {
+      if (config.DATABASE.ENABLED === true) {
+        pools = await poolsRepository.$getPools();
+      } else {
+        pools = poolsParser.miningPools;
+      }
+    } catch (error) {
+      pools = [];
+    }
+
+    if (!pools || !Array.isArray(pools) || pools.length === 0) {
+      if (config.DATABASE.ENABLED === true) {
+        return await poolsRepository.$getUnknownPool();
+      } else {
+        return poolsParser.unknownPool;
+      }
     }
 
     for (let i = 0; i < pools.length; ++i) {
-      if (addresses.length) {
-        const poolAddresses: string[] = typeof pools[i].addresses === 'string' ?
-          JSON.parse(pools[i].addresses) : pools[i].addresses;
-        for (let y = 0; y < poolAddresses.length; y++) {
-          if (addresses.indexOf(poolAddresses[y]) !== -1) {
-            return pools[i];
+      const pool = pools[i];
+      if (!pool) {
+        continue;
+      }
+
+      if (addresses.length && pool.addresses) {
+        try {
+          const poolAddresses: string[] = typeof pool.addresses === 'string' ?
+            JSON.parse(pool.addresses) : pool.addresses;
+          if (Array.isArray(poolAddresses)) {
+            for (let y = 0; y < poolAddresses.length; y++) {
+              if (addresses.indexOf(poolAddresses[y]) !== -1) {
+                return pool;
+              }
+            }
           }
+        } catch (error) {
+          // Skip pool with invalid address data
         }
       }
 
-      const regexes: string[] = typeof pools[i].regexes === 'string' ?
-        JSON.parse(pools[i].regexes) : pools[i].regexes;
-      for (let y = 0; y < regexes.length; ++y) {
-        const regex = new RegExp(regexes[y], 'i');
-        const match = asciiScriptSig.match(regex);
-        if (match !== null) {
-          return pools[i];
+      if (pool.regexes) {
+        try {
+          const regexes: string[] = typeof pool.regexes === 'string' ?
+            JSON.parse(pool.regexes) : pool.regexes;
+          if (Array.isArray(regexes)) {
+            for (let y = 0; y < regexes.length; ++y) {
+              const regex = new RegExp(regexes[y], 'i');
+              const match = asciiScriptSig.match(regex);
+              if (match !== null) {
+                return pool;
+              }
+            }
+          }
+        } catch (error) {
+          // Skip pool with invalid regex data
         }
       }
     }
@@ -440,7 +467,7 @@ class Blocks {
   /**
    * [INDEXING] Index transaction CPFP data for all blocks
    */
-   public async $generateCPFPDatabase(): Promise<void> {
+  public async $generateCPFPDatabase(): Promise<void> {
     if (Common.cpfpIndexingEnabled() === false) {
       return;
     }
@@ -539,14 +566,14 @@ class Blocks {
             indexedThisRun = 0;
             loadingIndicators.setProgress('block-indexing', progress, false);
           }
-        const blockHash = await bitcoinApi.$getBlockHash(blockHeight);
-        const verboseBlock = await bitcoinClient.getBlock(blockHash, 2);
-        const block = BitcoinApi.convertBlock(verboseBlock);
-        const transactions = await this.$getTransactionsExtended(blockHash, block.height, true, true);
-        const blockExtended = await this.$getBlockExtended(block, transactions, verboseBlock);
+          const blockHash = await bitcoinApi.$getBlockHash(blockHeight);
+          const verboseBlock = await bitcoinClient.getBlock(blockHash, 2);
+          const block = BitcoinApi.convertBlock(verboseBlock);
+          const transactions = await this.$getTransactionsExtended(blockHash, block.height, true, true);
+          const blockExtended = await this.$getBlockExtended(block, transactions, verboseBlock);
 
-        newlyIndexed++;
-        await blocksRepository.$saveBlockInDatabase(blockExtended);
+          newlyIndexed++;
+          await blocksRepository.$saveBlockInDatabase(blockExtended);
         }
 
         currentBlockHeight -= chunkSize;
@@ -816,8 +843,7 @@ class Blocks {
   }
 
   public async $getStrippedBlockTransactions(hash: string, skipMemoryCache = false,
-    skipDBLookup = false): Promise<TransactionStripped[]>
-  {
+    skipDBLookup = false): Promise<TransactionStripped[]> {
     if (skipMemoryCache === false) {
       // Check the memory cache
       const cachedSummary = this.getBlockSummaries().find((b) => b.id === hash);
