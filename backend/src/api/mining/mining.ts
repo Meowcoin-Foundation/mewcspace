@@ -470,8 +470,8 @@ class Mining {
       logger.debug(`Found ${blocksToProcess.length} ${algorithmName} blocks to process for difficulty adjustments`, logger.tags.mining);
 
       for (const block of blocksToProcess) {
-        // Get algorithm-specific difficulty for this block
-        const blockDifficulty = await bitcoinClient.getDifficulty(algorithm);
+        // Use the block's own difficulty value (already filtered by version/algorithm)
+        const blockDifficulty = block.difficulty;
         
         if (blockDifficulty !== currentDifficulty) {
           if (indexedHeights[block.height] === true) { // Already indexed
