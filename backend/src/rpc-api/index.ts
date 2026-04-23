@@ -46,11 +46,32 @@ function callRpc (cmd, args, rpc) {
 // ===----------------------------------------------------------------------===//
 // Initialize wrappers
 // ===----------------------------------------------------------------------===//
-(function () {
+
+// Bitcoin Core 30.x strictly enforces that the `algo` param for
+// getDifficulty and getNetworkHashPs must be a string, not a number.
+// Coerce 0 → "meowpow" and 1 → "scrypt" transparently here so callers
+// can continue using numeric constants internally.
+function coerceAlgoArg(args: any[], algoPosition: number): any[] {
+  const out = args.slice()
+  if (out.length > algoPosition && typeof out[algoPosition] === 'number') {
+    out[algoPosition] = out[algoPosition] === 0 ? 'meowpow' : 'scrypt'
+  }
+  return out
+}
+
+const ALGO_COERCE_COMMANDS: Record<string, number> = {
+  getDifficulty: 0,    // arg 0 is algo
+  getNetworkHashPs: 2, // args 0=nblocks, 1=height, 2=algo
+}
+
+;(function () {
   for (var protoFn in commands) {
     (function (protoFn) {
       Client.prototype[protoFn] = function () {
         var args = [].slice.call(arguments)
+        if (protoFn in ALGO_COERCE_COMMANDS) {
+          args = coerceAlgoArg(args, ALGO_COERCE_COMMANDS[protoFn])
+        }
         return callRpc(commands[protoFn], args, this.rpc)
       }
     })(protoFn)

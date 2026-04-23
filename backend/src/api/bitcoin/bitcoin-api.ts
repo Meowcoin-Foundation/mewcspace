@@ -180,13 +180,11 @@ class BitcoinApi implements AbstractBitcoinApi {
   }
 
   $getDifficultyByAlgorithm(algorithm: number): Promise<number> {
-    const algoStr = algorithm === 0 ? 'meowpow' : 'scrypt';
-    return this.bitcoindClient.getDifficulty(algoStr);
+    return this.bitcoindClient.getDifficulty(algorithm);
   }
 
   $getNetworkHashPsByAlgorithm(algorithm: number): Promise<number> {
-    const algoStr = algorithm === 0 ? 'meowpow' : 'scrypt';
-    return this.bitcoindClient.getNetworkHashPs(120, -1, algoStr);
+    return this.bitcoindClient.getNetworkHashPs(120, -1, algorithm);
   }
 
   protected async $convertTransaction(transaction: IBitcoinApi.Transaction, addPrevout: boolean, lazyPrevouts = false): Promise<IEsploraApi.Transaction> {
