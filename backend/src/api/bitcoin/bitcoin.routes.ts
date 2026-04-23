@@ -125,6 +125,35 @@ class BitcoinRoutes {
           .get(config.MEMPOOL.API_URL_PREFIX + 'address/:address/txs/chain/:txId', this.getAddressTransactions)
           .get(config.MEMPOOL.API_URL_PREFIX + 'address-prefix/:prefix', this.getAddressPrefix)
           ;
+      } else {
+        // In esplora mode the mewcspace frontend still routes block/tx/address
+        // requests through this backend. Proxy them to electrs's REST API.
+        const esploraProxy = async (req: Request, res: Response) => {
+          try {
+            const url = config.ESPLORA.REST_API_URL + req.path.replace(config.MEMPOOL.API_URL_PREFIX.replace(/\/$/, ''), '');
+            const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 10000 });
+            res.set(response.headers as any).status(response.status).send(response.data);
+          } catch (e: any) {
+            const status = e.response?.status || 500;
+            res.status(status).send(e.response?.data || e.message);
+          }
+        };
+        app
+          .get(config.MEMPOOL.API_URL_PREFIX + 'tx/:txId', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'tx/:txId/hex', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'tx/:txId/status', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'tx/:txId/outspends', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'block/:hash/header', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'blocks/tip/hash', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'block/:hash/txids', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'block/:hash/txs', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'block/:hash/txs/:index', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'block-height/:height', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'address/:address', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'address/:address/txs', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'address/:address/txs/chain/:txId', esploraProxy)
+          .get(config.MEMPOOL.API_URL_PREFIX + 'address-prefix/:prefix', esploraProxy)
+          ;
       }
   }
 
