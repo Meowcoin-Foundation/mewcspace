@@ -68,7 +68,7 @@ const ALGO_COERCE_COMMANDS: Record<string, number> = {
   for (var protoFn in commands) {
     (function (protoFn) {
       Client.prototype[protoFn] = function () {
-        var args = [].slice.call(arguments)
+        var args: any[] = [].slice.call(arguments)
         if (protoFn in ALGO_COERCE_COMMANDS) {
           args = coerceAlgoArg(args, ALGO_COERCE_COMMANDS[protoFn])
         }
