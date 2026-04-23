@@ -47,21 +47,30 @@ function callRpc (cmd, args, rpc) {
 // Initialize wrappers
 // ===----------------------------------------------------------------------===//
 
-// Bitcoin Core 30.x strictly enforces that the `algo` param for
-// getDifficulty and getNetworkHashPs must be a string, not a number.
-// Coerce 0 → "meowpow" and 1 → "scrypt" transparently here so callers
-// can continue using numeric constants internally.
-function coerceAlgoArg(args: any[], algoPosition: number): any[] {
+// Bitcoin Core 30.x strictly enforces RPC argument types. Two fixes applied
+// transparently at the client level so callers need no changes:
+//   1. algo must be a string ("meowpow"/"scrypt"), not a number (0/1)
+//   2. nblocks must be a positive integer or -1; 0 is rejected — fall back to 120
+function coerceNetworkHashPsArgs(args: any[]): any[] {
   const out = args.slice()
-  if (out.length > algoPosition && typeof out[algoPosition] === 'number') {
-    out[algoPosition] = out[algoPosition] === 0 ? 'meowpow' : 'scrypt'
+  // arg 0: nblocks — 0 is invalid, default to 120
+  if (out.length >= 1 && out[0] === 0) {
+    out[0] = 120
+  }
+  // arg 2: algo — coerce numeric to string
+  if (out.length > 2 && typeof out[2] === 'number') {
+    out[2] = out[2] === 0 ? 'meowpow' : 'scrypt'
   }
   return out
 }
 
-const ALGO_COERCE_COMMANDS: Record<string, number> = {
-  getDifficulty: 0,    // arg 0 is algo
-  getNetworkHashPs: 2, // args 0=nblocks, 1=height, 2=algo
+function coerceDifficultyArgs(args: any[]): any[] {
+  const out = args.slice()
+  // arg 0: algo — coerce numeric to string
+  if (out.length > 0 && typeof out[0] === 'number') {
+    out[0] = out[0] === 0 ? 'meowpow' : 'scrypt'
+  }
+  return out
 }
 
 ;(function () {
@@ -69,8 +78,10 @@ const ALGO_COERCE_COMMANDS: Record<string, number> = {
     (function (protoFn) {
       Client.prototype[protoFn] = function () {
         var args: any[] = [].slice.call(arguments)
-        if (protoFn in ALGO_COERCE_COMMANDS) {
-          args = coerceAlgoArg(args, ALGO_COERCE_COMMANDS[protoFn])
+        if (protoFn === 'getNetworkHashPs') {
+          args = coerceNetworkHashPsArgs(args)
+        } else if (protoFn === 'getDifficulty') {
+          args = coerceDifficultyArgs(args)
         }
         return callRpc(commands[protoFn], args, this.rpc)
       }
