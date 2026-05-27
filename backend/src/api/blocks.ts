@@ -171,6 +171,35 @@ class Blocks {
     return block;
   }
 
+  // Scan raw block hex for printable ASCII runs that come from the parent chain's
+  // coinbase transaction embedded in the AuxPoW proof. Mirrors coinbase_tags.py logic.
+  private extractAuxPowAscii(rawHex: string): string {
+    try {
+      const raw = Buffer.from(rawHex, 'hex');
+      const tags: string[] = [];
+      let run = '';
+      const isHexOnly = (s: string) => s.toLowerCase().replace(/\s/g, '').split('').every(c => '0123456789abcdef'.includes(c));
+      const flush = () => {
+        if (run.length >= 6 && !isHexOnly(run)) {
+          tags.push(run.trim());
+        }
+        run = '';
+      };
+      for (let i = 0; i < raw.length; i++) {
+        const b = raw[i];
+        if (b >= 0x20 && b <= 0x7e) {
+          run += String.fromCharCode(b);
+        } else {
+          flush();
+        }
+      }
+      flush();
+      return tags.join(' ');
+    } catch {
+      return '';
+    }
+  }
+
   /**
    * Return a block with additional data (reward, coinbase, fees...)
    * @param block
@@ -181,31 +210,27 @@ class Blocks {
   private async $getBlockExtended(block: IEsploraApi.Block, transactions: TransactionExtended[], verboseBlock?: IBitcoinApi.VerboseBlock): Promise<BlockExtended> {
     let coinbaseTx: TransactionMinerInfo;
 
-    // Check if this is an auxpow block
-    const isAuxPow = !!verboseBlock?.auxpow || (block.version & 0x100) !== 0;
-    if (isAuxPow && verboseBlock?.auxpow?.tx) {
-      // For auxpow blocks, the coinbase transaction is in auxpow.tx
-      const auxpowCoinbase = verboseBlock.auxpow.tx;
+    const isAuxPow = (block.version & 0x100) !== 0;
+    if (isAuxPow) {
+      // For auxpow/scrypt blocks the MEWC coinbase is just 6 bytes of block height
+      // with no pool tags. The parent chain's (Litecoin) coinbase is embedded in the
+      // AuxPoW proof section of the raw block and carries the actual pool tags.
+      // Fetch verbosity 0 hex and scan for printable ASCII runs — same approach as
+      // coinbase_tags.py.
+      const mewcCoinbase = transactionUtils.stripCoinbaseTransaction(transactions[0]);
       try {
-        const coinbaseHex = auxpowCoinbase.vin?.[0]?.coinbase || auxpowCoinbase.vin?.[0]?.scriptSig?.hex || '';
+        const rawHex: string = await bitcoinClient.getBlock(block.id, 0);
+        const parentAscii = this.extractAuxPowAscii(rawHex);
+        logger.debug(`[AUXPOW] Block #${block.height} parent coinbase ASCII: "${parentAscii}"`);
         coinbaseTx = {
-          vin: [{
-            scriptsig: coinbaseHex
-          }],
-          vout: (auxpowCoinbase.vout || []).map((vout) => ({
-            scriptpubkey_address: vout.scriptPubKey?.address || vout.scriptPubKey?.addresses?.[0] || '',
-            scriptpubkey_asm: vout.scriptPubKey?.asm || '',
-            value: vout.value || 0
-          })).filter((vout) => vout.value > 0)
+          vin: [{ scriptsig: Buffer.from(parentAscii).toString('hex') }],
+          vout: mewcCoinbase.vout,
         };
-        logger.debug(`[AUXPOW] Block #${block.height} parent coinbase ASCII: ${transactionUtils.hex2ascii(coinbaseHex)}`);
       } catch (auxpowError) {
-        logger.warn(`[AUXPOW] Error extracting auxpow coinbase: ${auxpowError}`);
-        // Fallback to regular transaction processing
-        coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
+        logger.warn(`[AUXPOW] Block #${block.height} raw hex fetch failed, falling back: ${auxpowError}`);
+        coinbaseTx = mewcCoinbase;
       }
     } else {
-      // For regular blocks, use the first transaction
       coinbaseTx = transactionUtils.stripCoinbaseTransaction(transactions[0]);
     }
 

@@ -205,7 +205,8 @@ class BitcoinApi implements AbstractBitcoinApi {
         value: Math.round(vout.value * 100000000),
         scriptpubkey: vout.scriptPubKey.hex,
         scriptpubkey_address: vout.scriptPubKey && vout.scriptPubKey.address ? vout.scriptPubKey.address
-          : vout.scriptPubKey.addresses ? vout.scriptPubKey.addresses[0] : '',
+          : vout.scriptPubKey.addresses ? vout.scriptPubKey.addresses[0]
+          : vout.scriptPubKey.type === 'pubkey' ? BitcoinApi.deriveAddressFromP2PK(vout.scriptPubKey.hex) : '',
         scriptpubkey_asm: vout.scriptPubKey.asm ? this.convertScriptSigAsm(vout.scriptPubKey.hex) : '',
         scriptpubkey_type: this.translateScriptPubKeyType(vout.scriptPubKey.type),
       };
@@ -265,6 +266,23 @@ class BitcoinApi implements AbstractBitcoinApi {
     } else {
       return 'unknown';
     }
+  }
+
+  // Bitcoin Core 30.x no longer emits an `address` field for P2PK (pay-to-pubkey) outputs.
+  // Derive the P2PKH-equivalent MEWC address so pool matching via address lists still works.
+  static deriveAddressFromP2PK(scriptHex: string): string {
+    try {
+      const script = Buffer.from(scriptHex, 'hex');
+      const decompiled = bitcoinjs.script.decompile(script);
+      if (decompiled && decompiled.length === 2 && decompiled[0] instanceof Buffer) {
+        const mewcNetwork = { pubKeyHash: 0x32, scriptHash: 0x05 } as bitcoinjs.networks.Network;
+        const { address } = bitcoinjs.payments.p2pkh({ pubkey: decompiled[0], network: mewcNetwork });
+        return address || '';
+      }
+    } catch {
+      // fall through
+    }
+    return '';
   }
 
   private async $appendMempoolFeeData(transaction: IEsploraApi.Transaction): Promise<IEsploraApi.Transaction> {
